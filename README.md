@@ -1,121 +1,156 @@
-# Face Recognition Attendance System
+# Face Recognition Attendance System (Java Backend)
 
-A **Spring Boot–based facial recognition attendance system** designed to automate student attendance tracking using face recognition. The project integrates **computer vision**, **RESTful APIs**, and a **web interface** for registration, recognition, and attendance management.
-
----
-
-## 📋 Features
-
-- **Student Registration:** Register new students with name, ID, and face image.  
-- **Facial Recognition:** Automatically identifies and marks attendance through camera input.  
-- **Attendance Management:** Stores attendance records with timestamps.  
-- **RESTful API Backend:** Provides structured endpoints for registration and attendance operations.  
-- **Frontend UI:** Simple HTML interface for registration and attendance marking.  
+This repository contains the **FaceRecognitionJava** Spring Boot application — the Java backend and web UI for a facial recognition attendance system. The face recognition logic runs in a separate Python service (face-engine-python); that service has its own README. This document covers **only** the Java project setup, configuration, and how to connect it to your face engine API.
 
 ---
 
-## 🏗️ Project Structure
+## 🧩 What this service provides
+
+- REST API for student registration and attendance
+- Simple HTML frontend for registering students and marking attendance
+- Persistence layer using Spring Data JPA (MySQL)
+- A `FaceEngineService` that communicates with the external face-engine HTTP API
+
+---
+
+## 🏗️ Project Structure (Java only)
 
 ```
 FaceRecognitionJava-main/
-│
-├── pom.xml                                # Maven build configuration
+├── pom.xml
+├── mvnw, mvnw.cmd
 ├── src/
-│   ├── main/
-│   │   ├── java/com/example/facerecog/
-│   │   │   ├── controller/               # REST Controllers
-│   │   │   ├── dto/                      # Request/Response DTOs
-│   │   │   ├── model/                    # JPA Entities
-│   │   │   ├── repository/               # Spring Data Repositories
-│   │   │   ├── service/                  # Business Logic & Face Recognition
-│   │   │   └── FacerecogApplication.java # Main Spring Boot Class
-│   │   └── resources/
-│   │       ├── static/                   # Frontend HTML pages
-│   │       └── application.properties     # Configuration file
-│   └── test/java/...                     # Unit tests
-│
-└── HELP.md, mvnw, mvnw.cmd               # Maven helper scripts
+│   ├── main/java/com/example/facerecog/
+│   │   ├── controller/               # REST Controllers (StudentController, etc.)
+│   │   ├── dto/                      # Request/Response DTOs (AttendanceRequest, ...)
+│   │   ├── model/                    # JPA Entities (Student, Attendance)
+│   │   ├── repository/               # Spring Data Repositories
+│   │   ├── service/                  # Business logic including FaceEngineService
+│   │   └── FacerecogApplication.java # Main Spring Boot application class
+│   └── resources/
+│       ├── static/                   # HTML pages (index, register, attendance)
+│       └── application.properties    # Application configuration
+└── src/test/java/...                 # Unit tests
 ```
 
 ---
 
-## ⚙️ Technologies Used
+## ⚙️ Prerequisites
 
-| Category | Tools/Frameworks |
-|-----------|------------------|
-| **Backend** | Java 17+, Spring Boot |
-| **Frontend** | HTML, JavaScript, Bootstrap |
-| **Database** | MySQL (JPA/Hibernate) |
-| **Face Recognition** | OpenCV / JavaCV (Bytedeco) |
-| **Build Tool** | Maven |
-| **Server** | Embedded Tomcat |
+- Java 17 (or the version specified in `pom.xml`) installed and `JAVA_HOME` set
+- Maven 3.6+ (or use the included Maven wrapper `mvnw`)
+- MySQL (or compatible DB) accessible for the application
+- The Python face engine service (runs separately) — configure its URL in `application.properties` (default: `http://127.0.0.1:5001`)
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Java Project Setup & Run (Step-by-step)
 
-### 1. Clone the Repository
-
+### 1. Clone the Java project
 ```bash
-git clone https://github.com/yourusername/FaceRecognitionJava.git
+git clone <your-java-repo-url> FaceRecognitionJava-main
 cd FaceRecognitionJava-main
 ```
 
-### 2. Configure Database
+> If you already have the repo files locally (example: unzip or copy), just `cd` into the project directory.
 
-Update `src/main/resources/application.properties`:
+### 2. Create / Configure the database
+Create a MySQL database for the app (example name `face_recog`):
+```sql
+CREATE DATABASE face_recog CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
 
+Create a database user or use an existing one, then grant privileges:
+```sql
+CREATE USER 'faceuser'@'localhost' IDENTIFIED BY 'strong_password';
+GRANT ALL PRIVILEGES ON face_recog.* TO 'faceuser'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+### 3. Configure `application.properties`
+Open `src/main/resources/application.properties` and set your DB and face-engine URL values. Example:
 ```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/face_recog
-spring.datasource.username=root
-spring.datasource.password=yourpassword
+# Database
+spring.datasource.url=jdbc:mysql://localhost:3306/face_recog?useSSL=false&serverTimezone=UTC
+spring.datasource.username=faceuser
+spring.datasource.password=strong_password
 spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# Face Engine API URL (the Python face-engine runs separately, default on port 5001)
+face.engine.url=http://127.0.0.1:5001
 ```
 
-### 3. Build and Run
+> `spring.jpa.hibernate.ddl-auto=update` is convenient for development (it creates/updates tables automatically). For production, prefer explicit migrations (Flyway/Liquibase) and set this to `validate` or remove it.
 
+### 4. Build the project
+Use Maven wrapper (recommended) or your local Maven installation:
 ```bash
-mvn clean install
-mvn spring-boot:run
+# Unix / macOS
+./mvnw clean package -DskipTests
+
+# Windows (PowerShell)
+.\mvnw.cmd clean package -DskipTests
 ```
 
-Access the app at:  
-👉 **http://localhost:8080**
+To run tests instead of skipping:
+```bash
+./mvnw test
+```
+
+### 5. Run the application
+You can run the packaged JAR or start via Spring Boot plugin:
+```bash
+# Run with Spring Boot (during development)
+./mvnw spring-boot:run
+
+# OR run the packaged jar
+java -jar target/*.jar
+```
+
+The application starts on port `8080` by default. Access the UI at:
+```
+http://localhost:8080
+```
+
+### 6. Verify integration with Face Engine
+- Ensure the Python face engine service is running at the URL you configured (default `http://127.0.0.1:5001`).
+- Use the web UI (`/register` page) to register a student image and then use the attendance page to mark attendance.
+- The Java backend will forward face image data to the face-engine endpoints (example endpoints: `/register-face`, `/recognize` — check the Python repo README for exact routes).
 
 ---
 
-## 🧠 Core Components
+## 🔧 Common tweaks & notes
 
-- **FaceEngineService:** Handles facial feature extraction and comparison.  
-- **StudentService:** Manages student data and registration logic.  
-- **AttendanceService:** Manages marking and retrieving attendance records.  
-- **StudentController:** REST endpoints for student operations and attendance marking.
-
----
-
-## 📄 API Endpoints
-
-| Endpoint | Method | Description |
-|-----------|---------|-------------|
-| `/api/student/register` | `POST` | Register a new student |
-| `/api/student/mark-attendance` | `POST` | Mark attendance using face image |
-| `/api/student/attendance/{id}` | `GET` | Get attendance history of a student |
+- If your face engine is hosted on another machine or port, change `face.engine.url` accordingly. Use `http://<host>:5001` or the deployed HTTPS URL.
+- If you face CORS issues during local development (front-end JS calling `localhost:8080` + Java calling Python), ensure the Java backend allows cross-origin requests or the Python API allows them as needed.
+- For production, secure your endpoints, use HTTPS, set proper secrets management, and replace `ddl-auto=update` with migrations.
 
 ---
 
-## 💡 Future Enhancements
+## 📄 API Endpoints (high-level overview)
 
-- Real-time camera integration for live attendance.  
-- Admin dashboard with analytics and reporting.  
-- Multi-class / course attendance tracking.  
-- Enhanced facial recognition accuracy using deep learning models.
+| Java Endpoint | Purpose |
+|---------------|---------|
+| `/api/student/register` | Register student and forward face image to face-engine for encoding/storage |
+| `/api/student/mark-attendance` | Send face image to face-engine to identify and then save attendance |
+| `/api/student/attendance/{id}` | Retrieve attendance history for a student |
+
+Check the controller classes in `src/main/java/com/example/facerecog/controller` for exact request/response formats.
 
 ---
 
-## 🧑‍💻 Author
+## 🧑‍💻 Authors & Contributors
 
-Project developed by **{Your Name}**  
-Feel free to connect and contribute!
+**Project Developed By:**  
+- 👨‍💻 **Divyansh Namdev** (Divyanshn74)
+
+**Team Members:**  
+- Gopal Kumar Saw  
+- Vivek Pushptode  
+- Neha Rathor
+
+Python face engine repo: https://github.com/Divyanshn74/face-engine-python
 
 ---
 
