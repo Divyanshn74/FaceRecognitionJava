@@ -140,15 +140,40 @@ Check the controller classes in `src/main/java/com/example/facerecog/controller`
 
 ---
 
+
+### 🚀 Core System & Security Enhancements
+- **Role-Based Access Control (RBAC):** Implemented a robust three-tier security system with `ROLE_MASTER`, `ROLE_ADMIN`, and `ROLE_USER`.
+- **Themed UI:** Overhauled the entire web UI with a consistent "Monet pastel" glassmorphism theme.
+- **User-Student Linking:** Explicitly linked `User` accounts to `Student` records via an `enrollmentNumber` field.
+- **Custom Error Handling:** Implemented a custom 403 "Access Denied" page.
+- **Forced Password Change:** New users (especially those from bulk imports) are now required to change their default password on first login for enhanced security.
+- **Dynamic Application Settings:** Introduced a mechanism to store and retrieve application settings (e.g., Python API URL) from the database, allowing dynamic configuration without application restarts.
+- **Robustness Improvements:** Addressed various compilation errors and runtime bugs, including `LazyInitializationException` and form binding issues.
+
+### 👑 ROLE_MASTER Features
+- **Master Dashboard:** A comprehensive dashboard providing full oversight and management capabilities.
+- **User Management (CRUD):** Full Create, Read, Update, Delete functionality for user accounts, including role assignment and `enrollmentNumber` linking.
+- **Student Management (CRUD):** Full Create, Read, Update, Delete functionality for student records.
+- **Bulk User Import:** Ability to import multiple user accounts from a CSV file, assigning default passwords and roles.
+- **Bulk Student Import:** Ability to import multiple student records from a CSV file, with face embeddings initially set to `NULL`.
+- **"Register Faces" Workflow:** Dedicated page to list all students and allow masters to register or update face embeddings via file upload or webcam capture.
+- **Global Attendance View & Edit:** A page to view and search attendance records for *all* students across any date range, with the ability to modify individual attendance statuses.
+- **Application Settings UI:** A dedicated UI to manage and update core application settings dynamically.
+
+### 👮‍♀️ ROLE_ADMIN Features
+- **Manual Attendance Management:** A new page allowing admins to manually mark or update attendance for all students on a specific date, with "Mark All Present" and "Mark All Absent" options.
+- **PDF Attendance Reports:** Ability to generate and download attendance reports in PDF format, filterable by student and date range.
+- **"Register Faces" Workflow:** Dedicated page to list all students and allow admins to register or update face embeddings via file upload or webcam capture.
+
+### 👤 ROLE_USER Features
+- **User Profile Page:** A dedicated page for users to view their own profile information and securely change their password.
+- **Attendance Percentage:** The user's attendance records page now displays the overall attendance percentage based on the applied filters.
+
+---
+
 ## 🧑‍💻 Authors & Contributors
-
-**Project Developed By:**  
+ 
 - 👨‍💻 **Divyansh Namdev** (Divyanshn74)
-
-**Team Members:**  
-- Gopal Kumar Saw  
-- Vivek Pushptode  
-- Neha Rathor
 
 Python face engine repo: https://github.com/Divyanshn74/face-engine-python
 

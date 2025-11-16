@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registration</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            -webkit-user-select: none; /* Safari */
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* IE10+/Edge */
+            user-select: none; /* Standard */
+        }
+        .container {
+            max-width: 700px;
+            margin-top: 50px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        video, canvas {
+            width: 100%;
+            max-width: 320px; /* Adjust as needed */
+            height: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            display: block;
+            margin: 0 auto 15px auto;
+        }
+        .form-label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4 text-center">Register New Student</h2>
+        <div class="mb-3">
+            <label for="nameInput" class="form-label">Name</label>
+            <input type="text" class="form-control" id="nameInput" placeholder="Enter student name">
+        </div>
+        <div class="mb-3">
+            <label for="fullNameInput" class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="fullNameInput" placeholder="Enter student full name">
+        </div>
+        <div class="mb-3">
+            <label for="rollNoInput" class="form-label">Roll No</label>
+            <input type="text" class="form-control" id="rollNoInput" placeholder="Enter roll number">
+        </div>
+        <div class="mb-3">
+            <label for="enrollmentNoInput" class="form-label">Enrollment Number</label>
+            <input type="text" class="form-control" id="enrollmentNoInput" placeholder="Enter enrollment number">
+        </div>
+
+        <div class="text-center mb-3">
+            <div id="webcamSection">
+                <video id="webcamFeed" autoplay playsinline></video>
+                <canvas id="captureCanvas" style="display: none;"></canvas>
+                <button id="captureButton" class="btn btn-primary mt-2">Capture Photo</button>
+            </div>
+            <div id="fileUploadSection" style="display: none;">
+                <label for="imageUpload" class="form-label">Upload Image (JPG/JPEG only)</label>
+                <input type="file" class="form-control" id="imageUpload" accept="image/jpeg">
+                <img id="imagePreview" src="#" alt="Image Preview" style="max-width: 100%; height: auto; margin-top: 10px; display: none;">
+            </div>
+            <div class="mt-3">
+                <button id="toggleWebcamButton" class="btn btn-secondary me-2">Use Webcam</button>
+                <button id="toggleFileUploadButton" class="btn btn-secondary">Upload File</button>
+            </div>
+        </div>
+        
+        <div class="d-grid gap-2 mb-4">
+            <button id="registerButton" class="btn btn-success btn-lg" disabled>Register Student</button>
+        </div>
+
+        <div id="alertContainer"></div>
+    </div>
+
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>    <script>
+        const video = document.getElementById('webcamFeed');
+        const canvas = document.getElementById('captureCanvas');
+        const nameInput = document.getElementById('nameInput');
+        const fullNameInput = document.getElementById('fullNameInput');
+        const rollNoInput = document.getElementById('rollNoInput');
+        const enrollmentNoInput = document.getElementById('enrollmentNoInput');
+        const captureButton = document.getElementById('captureButton');
+        const registerButton = document.getElementById('registerButton');
+        const alertContainer = document.getElementById('alertContainer');
+
+        const webcamSection = document.getElementById('webcamSection');
+        const fileUploadSection = document.getElementById('fileUploadSection');
+        const imageUpload = document.getElementById('imageUpload');
+        const imagePreview = document.getElementById('imagePreview');
+        const toggleWebcamButton = document.getElementById('toggleWebcamButton');
+        const toggleFileUploadButton = document.getElementById('toggleFileUploadButton');
+
+        let capturedImageBase64 = null;
+        let currentStream = null; // To store the webcam stream
+
+        // Function to start webcam
+        function startWebcam() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    currentStream = stream;
+                    video.srcObject = stream;
+                    video.play();
+                    captureButton.disabled = false;
+                    showAlert("info", "Webcam started. Capture your photo.");
+                })
+                .catch(err => {
+                    console.error("Error accessing webcam: ", err);
+                    showAlert("danger", "Could not access webcam. Please ensure it's connected and permissions are granted.");
+                    captureButton.disabled = true;
+                });
+        }
+
+        // Function to stop webcam
+        function stopWebcam() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+
+        // Initial setup: hide webcam and show file upload
+        webcamSection.style.display = 'none';
+        fileUploadSection.style.display = 'block';
+        registerButton.disabled = true; // Ensure register button is disabled initially
+        showAlert("info", "Upload a JPG/JPEG image file or switch to webcam.");
+
+        toggleWebcamButton.addEventListener('click', () => {
+            stopWebcam();
+            fileUploadSection.style.display = 'none';
+            webcamSection.style.display = 'block';
+            startWebcam();
+            capturedImageBase64 = null; // Clear captured image when switching mode
+            registerButton.disabled = true;
+            imagePreview.style.display = 'none';
+            imageUpload.value = ''; // Clear file input
+        });
+
+        toggleFileUploadButton.addEventListener('click', () => {
+            stopWebcam();
+            webcamSection.style.display = 'none';
+            fileUploadSection.style.display = 'block';
+            capturedImageBase64 = null; // Clear captured image when switching mode
+            registerButton.disabled = true;
+            imagePreview.style.display = 'none';
+            imageUpload.value = ''; // Clear file input
+            showAlert("info", "Upload a JPG/JPEG image file.");
+        });
+
+        captureButton.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedImageBase64 = canvas.toDataURL('image/jpeg').split(',')[1];
+            registerButton.disabled = false;
+            showAlert("info", "Photo captured! Click Register to save.");
+        });
+
+        imageUpload.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        imagePreview.src = e.target.result;
+                        imagePreview.style.display = 'block';
+                        capturedImageBase64 = e.target.result.split(',')[1];
+                        registerButton.disabled = false;
+                        showAlert("info", "Image uploaded! Click Register to save.");
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    showAlert("danger", "Please upload a JPG or JPEG image.");
+                    capturedImageBase64 = null;
+                    registerButton.disabled = true;
+                    imagePreview.style.display = 'none';
+                }
+            } else {
+                capturedImageBase64 = null;
+                registerButton.disabled = true;
+                imagePreview.style.display = 'none';
+            }
+        });
+
+        registerButton.addEventListener('click', async () => {
+            const name = nameInput.value.trim();
+            const fullName = fullNameInput.value.trim();
+            const rollNo = rollNoInput.value.trim();
+            const enrollmentNumber = enrollmentNoInput.value.trim();
+
+            if (!name || !fullName || !rollNo || !enrollmentNumber || !capturedImageBase64) {
+                showAlert("warning", "Please fill in all fields and provide an image.");
+                return;
+            }
+
+            registerButton.disabled = true;
+            showAlert("info", "Registering student...", false);
+
+            try {
+                const response = await fetch('/admin/register-student', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        rollNo: rollNo,
+                        name: name,
+                        fullName: fullName,
+                        enrollmentNumber: enrollmentNumber,
+                        imageBase64: capturedImageBase64
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showAlert("success", data.status || "Student registered successfully!");
+                    nameInput.value = '';
+                    fullNameInput.value = '';
+                    rollNoInput.value = '';
+                    enrollmentNoInput.value = '';
+                    capturedImageBase64 = null;
+                    registerButton.disabled = true;
+                    imagePreview.style.display = 'none';
+                    imageUpload.value = '';
+                    // Optionally switch back to webcam or clear webcam capture
+                } else {
+                    showAlert("danger", data.status || "Registration failed: " + (data.message || "Unknown error."));
+                }
+            } catch (error) {
+                console.error("Error during registration:", error);
+                showAlert("danger", "Network error or server unreachable.");
+            } finally {
+                registerButton.disabled = false;
+            }
+        });
+
+        function showAlert(type, message, dismissible = true) {
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    ${dismissible ? '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' : ''}
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

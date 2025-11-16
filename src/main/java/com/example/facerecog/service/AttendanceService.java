@@ -1,6 +1,7 @@
 package com.example.facerecog.service;
 
 import com.example.facerecog.dto.AttendanceResponse;
+import com.example.facerecog.dto.StudentAttendanceDTO;
 import com.example.facerecog.model.Attendance;
 import com.example.facerecog.model.Student;
 import com.example.facerecog.repository.AttendanceRepository;
@@ -17,52 +18,34 @@ import java.util.stream.Collectors;
 @Service
 public class AttendanceService {
 
-    private final StudentRepository studentRepository;
     private final AttendanceRepository attendanceRepository;
-    private final FaceEngineService faceEngineService;
+    private final StudentRepository studentRepository;
 
-    public AttendanceService(StudentRepository studentRepository, AttendanceRepository attendanceRepository, FaceEngineService faceEngineService) {
-        this.studentRepository = studentRepository;
+    public AttendanceService(AttendanceRepository attendanceRepository, StudentRepository studentRepository) {
         this.attendanceRepository = attendanceRepository;
-        this.faceEngineService = faceEngineService;
+        this.studentRepository = studentRepository;
     }
 
     @Transactional
-    public Map<String, String> markAttendance(String rollNo, String base64Image) {
-        System.out.println("Attempting to mark attendance for rollNo: " + rollNo);
-
-        Optional<Student> studentOptional = studentRepository.findByRollNo(rollNo);
+    public String markAttendance(String studentIdentifier) {
+        Optional<Student> studentOptional = studentRepository.findByEnrollmentNumber(studentIdentifier);
         if (studentOptional.isEmpty()) {
-            System.out.println("Student with rollNo " + rollNo + " not found.");
-            return Map.of("status", "Student not found");
+            return "Student not found";
         }
         Student student = studentOptional.get();
+        LocalDate today = LocalDate.now();
 
-        System.out.println("Comparing faces for student " + student.getName());
-        boolean match = faceEngineService.compare(student.getFaceEmbedding(), base64Image);
-
-        if (match) {
-            System.out.println("Face matched for student " + student.getName() + ". Checking for existing attendance.");
-            LocalDate today = LocalDate.now();
-            Optional<Attendance> existingAttendance = attendanceRepository.findByStudentAndDate(student, today);
-
-            if (existingAttendance.isEmpty()) {
-                System.out.println("No existing attendance for " + student.getName() + " today. Marking as PRESENT.");
-                Attendance attendance = Attendance.builder()
-                        .student(student)
-                        .date(today)
-                        .status("PRESENT")
-                        .build();
-                attendanceRepository.save(attendance);
-                return Map.of("status", "PRESENT");
-            } else {
-                System.out.println("Attendance already marked for " + student.getName() + " today.");
-                return Map.of("status", "ALREADY_PRESENT");
-            }
-        } else {
-            System.out.println("Face did not match for student " + student.getName());
-            return Map.of("status", "NOT_MATCHED");
+        Optional<Attendance> existingAttendance = attendanceRepository.findByStudentAndDate(student, today);
+        if (existingAttendance.isPresent()) {
+            return "ALREADY_PRESENT";
         }
+
+        Attendance newAttendance = new Attendance();
+        newAttendance.setStudent(student);
+        newAttendance.setDate(today);
+        newAttendance.setStatus("PRESENT");
+        attendanceRepository.save(newAttendance);
+        return "PRESENT";
     }
 
     public List<AttendanceResponse> getStudentAttendance(String enrollmentNumber) {
@@ -76,5 +59,81 @@ public class AttendanceService {
         return attendanceRecords.stream()
                 .map(attendance -> new AttendanceResponse(attendance.getDate(), attendance.getStatus()))
                 .collect(Collectors.toList());
+    }
+
+    public List<Attendance> searchAttendance(String enrollmentNumber, LocalDate startDate, LocalDate endDate) {
+        if (enrollmentNumber != null && enrollmentNumber.isBlank()) {
+            enrollmentNumber = null;
+        }
+        return attendanceRepository.search(enrollmentNumber, startDate, endDate);
+    }
+
+    @Transactional
+    public void updateAttendanceStatus(Long attendanceId, String status) {
+        attendanceRepository.findById(attendanceId).ifPresent(attendance -> {
+            attendance.setStatus(status);
+            attendanceRepository.save(attendance);
+        });
+    }
+
+    @Transactional(readOnly = true)
+    public List<StudentAttendanceDTO> getStudentAttendanceForDate(LocalDate date) {
+        List<Student> allStudents = studentRepository.findAll();
+        List<Attendance> attendanceForDate = attendanceRepository.findByDate(date);
+
+        Map<Long, String> attendanceStatusMap = attendanceForDate.stream()
+                .collect(Collectors.toMap(att -> att.getStudent().getId(), Attendance::getStatus));
+
+        return allStudents.stream()
+                .map(student -> new StudentAttendanceDTO(
+                        student.getId(),
+                        student.getName(),
+                        student.getRollNo(),
+                        attendanceStatusMap.get(student.getId())
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void saveManualAttendance(LocalDate date, List<StudentAttendanceDTO> statuses) {
+        if (statuses == null || statuses.isEmpty()) {
+            return;
+        }
+
+        // Filter out any malformed entries from the form submission
+        List<StudentAttendanceDTO> validStatuses = statuses.stream()
+                .filter(dto -> dto != null && dto.getStudentId() != null)
+                .collect(Collectors.toList());
+
+        if (validStatuses.isEmpty()) {
+            return;
+        }
+
+        List<Long> studentIds = validStatuses.stream().map(StudentAttendanceDTO::getStudentId).collect(Collectors.toList());
+
+        List<Attendance> existingRecords = attendanceRepository.findByDateAndStudentIdIn(date, studentIds);
+        Map<Long, Attendance> existingRecordMap = existingRecords.stream()
+                .collect(Collectors.toMap(att -> att.getStudent().getId(), att -> att));
+
+        List<Student> allStudents = studentRepository.findAllById(studentIds);
+        Map<Long, Student> studentMap = allStudents.stream()
+                .collect(Collectors.toMap(Student::getId, student -> student));
+
+        List<Attendance> toSave = validStatuses.stream().map(dto -> {
+            Attendance record = existingRecordMap.getOrDefault(dto.getStudentId(), new Attendance());
+            Student student = studentMap.get(dto.getStudentId());
+            
+            // If student is not found in the DB, skip this record
+            if (student == null) {
+                return null;
+            }
+
+            record.setStudent(student);
+            record.setDate(date);
+            record.setStatus(dto.getStatus() != null ? dto.getStatus() : "ABSENT");
+            return record;
+        }).filter(java.util.Objects::nonNull).collect(Collectors.toList());
+
+        attendanceRepository.saveAll(toSave);
     }
 }

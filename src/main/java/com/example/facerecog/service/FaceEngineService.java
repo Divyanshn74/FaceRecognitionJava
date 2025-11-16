@@ -3,17 +3,20 @@ package com.example.facerecog.service;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class FaceEngineService {
 
-    @Value("${face.engine.url}")
-    private String faceEngineBaseUrl;
+    private final SettingService settingService;
+
+    public FaceEngineService(SettingService settingService) {
+        this.settingService = settingService;
+    }
 
     public String getEmbedding(String base64Image) {
         try {
+            String faceEngineBaseUrl = settingService.getSetting("face.engine.url");
             JSONObject requestBody = new JSONObject();
             requestBody.put("image", base64Image);
 
@@ -36,6 +39,7 @@ public class FaceEngineService {
 
     public boolean compare(String knownEmbedding, String liveBase64) {
         try {
+            String faceEngineBaseUrl = settingService.getSetting("face.engine.url");
             JSONObject requestBody = new JSONObject();
             // Assuming knownEmbedding is a JSON string representation of a list/array
             // Unirest's JSONObject can parse this directly if it's valid JSON

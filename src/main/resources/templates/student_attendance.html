@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Attendance Records</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Monet Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;500&display=swap" rel="stylesheet">
+
+    <style>
+
+        /* Monet Pastel Background */
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            background:
+                url("https://www.transparenttextures.com/patterns/paper-fibers.png"),
+                linear-gradient(135deg, #fcefe8 0%, #eef4fa 45%, #e3f4e8 100%);
+
+            font-family: "Crimson Pro", serif;
+            color: #3d4a50;
+            padding: 20px;
+            user-select: none;
+        }
+
+        /* Glass container */
+        .glass-box {
+            width: 100%;
+            max-width: 950px;
+            background: rgba(255, 255, 255, 0.78);
+            border-radius: 22px;
+            border: 1px solid rgba(205, 205, 205, 0.35);
+            backdrop-filter: blur(20px);
+            padding: 45px 45px;
+            box-shadow:
+                0 10px 28px rgba(0, 0, 0, 0.12),
+                inset 0 0 20px rgba(255, 255, 255, 0.55);
+            animation: fadeUp 0.7s ease-out forwards;
+            opacity: 0;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(25px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        h2 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 500;
+            color: #4a5158;
+            margin-bottom: 32px;
+        }
+
+        /* Section Blocks */
+        .section-block {
+            margin-bottom: 32px;
+        }
+
+        /* Filter Section */
+        .filter-section {
+            background: rgba(255, 255, 255, 0.65);
+            padding: 20px 25px;
+            border-radius: 16px;
+            max-width: 650px;
+            margin: auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .filter-section label {
+            font-size: 15px;
+            font-weight: 500;
+            color: #4f5a63;
+        }
+
+        /* NEW Monet Glass Date Input */
+        .date-input {
+            border: 1px solid rgba(180, 180, 180, 0.4);
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(6px);
+            padding: 8px 12px;
+            font-size: 15px;
+            border-radius: 12px;
+            color: #3d4a50;
+            transition: 0.25s ease;
+            min-width: 180px;
+        }
+
+        .date-input:focus {
+            border-color: #b8cedd;
+            box-shadow: 0 0 10px rgba(180, 205, 220, 0.6);
+            outline: none;
+        }
+
+        .date-input::-webkit-calendar-picker-indicator {
+            filter: invert(60%) sepia(20%) saturate(150%) hue-rotate(175deg);
+            cursor: pointer;
+        }
+
+        /* Pastel Buttons */
+        .btn-pastel {
+            background: linear-gradient(135deg, #bfdcf0, #ddebf7);
+            border: 1px solid #b7cde0;
+            color: #2f3b42;
+            border-radius: 10px;
+            padding: 8px 16px;
+            transition: 0.25s;
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .btn-pastel:hover {
+            background: linear-gradient(135deg, #abcce5, #cfe0ef);
+        }
+
+        /* Summary Section */
+        .summary-section {
+            background: rgba(255, 255, 255, 0.65);
+            border-radius: 16px;
+            padding: 18px;
+            max-width: 650px;
+            margin: 20px auto 30px;
+            font-size: 17px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .summary-section span {
+            margin: 0 10px;
+        }
+
+        /* Table */
+        .table-container {
+            background: rgba(255, 255, 255, 0.65);
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+        }
+
+        table thead th {
+            background: linear-gradient(135deg, #bdd4e6, #e2eef7);
+            color: #2f3b42;
+            border-color: rgba(0,0,0,0.1);
+            font-size: 15px;
+        }
+
+        table tbody td {
+            background: rgba(255,255,255,0.90);
+            border-color: rgba(0,0,0,0.08);
+            color: #3d4a50;
+        }
+
+        tbody tr:nth-child(even) td {
+            background: rgba(255,255,255,0.75);
+        }
+
+        /* Status Colors */
+        .status-PRESENT { color: #1ca467; font-weight: 600; }
+        .status-ABSENT { color: #cd4236; font-weight: 600; }
+
+        /* Alerts */
+        #alertContainer .alert {
+            max-width: 650px;
+            margin: 20px auto;
+            border-radius: 12px;
+        }
+
+        /* Back button */
+        .btn-back {
+            background: linear-gradient(135deg, #ededed, #fafafa);
+            border: 1px solid #d1d1d1;
+            color: #333;
+            padding: 10px 20px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 15px;
+            margin-top: 30px;
+            display: inline-block;
+            transition: 0.25s;
+        }
+
+        .btn-back:hover {
+            background: linear-gradient(135deg, #e0e0e0, #f4f4f4);
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="glass-box">
+
+        <h2>📊 My Attendance Records</h2>
+
+        <!-- Filter Section -->
+        <div class="filter-section section-block">
+            <div class="row g-3 align-items-center justify-content-center text-center">
+
+                <div class="col-auto">
+                    <label for="startDate">From</label>
+                </div>
+                <div class="col-auto">
+                    <input type="date" id="startDate" class="date-input">
+                </div>
+
+                <div class="col-auto">
+                    <label for="endDate">To</label>
+                </div>
+                <div class="col-auto">
+                    <input type="date" id="endDate" class="date-input">
+                </div>
+
+                <div class="col-auto">
+                    <button id="filterButton" class="btn btn-pastel">Filter</button>
+                </div>
+
+                <div class="col-auto">
+                    <button id="resetButton" class="btn btn-pastel">Reset</button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="summary-section text-center">
+            <span>Total Days: <strong id="totalCount">0</strong></span> |
+            <span>Present: <strong id="presentCount" class="status-PRESENT">0</strong></span> |
+            <span>Absent: <strong id="absentCount" class="status-ABSENT">0</strong></span> |
+            <span>Percentage: <strong id="percentage">0%</strong></span>
+        </div>
+
+        <!-- Table -->
+        <div id="attendanceRecords" class="section-block">
+            <div class="table-container table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceTableBody">
+                        <tr><td colspan="2" class="text-center">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Alerts -->
+        <div id="alertContainer"></div>
+
+        <!-- Back Button -->
+        <div class="text-center">
+            <a href="/" class="btn btn-back">← Back to Home</a>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- YOUR ORIGINAL JS (UNCHANGED) -->
+    <script>
+        const attendanceTableBody = document.getElementById("attendanceTableBody");
+        const alertContainer = document.getElementById("alertContainer");
+        const startDateInput = document.getElementById("startDate");
+        const endDateInput = document.getElementById("endDate");
+        const filterButton = document.getElementById("filterButton");
+        const resetButton = document.getElementById("resetButton");
+
+        const totalCountEl = document.getElementById("totalCount");
+        const presentCountEl = document.getElementById("presentCount");
+        const absentCountEl = document.getElementById("absentCount");
+        const percentageEl = document.getElementById("percentage");
+
+        let allRecords = [];
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const attendanceRecordsDiv = document.getElementById("attendanceRecords");
+            attendanceTableBody.innerHTML = `<tr><td colspan="2" class="text-center">Loading attendance...</td></tr>`;
+
+            try {
+                const response = await fetch(`/user/api/my-attendance`);
+
+                if (response.ok) {
+                    allRecords = await response.json();
+                    displayData(allRecords);
+                    showAlert("success", "Attendance records loaded successfully!");
+                } else {
+                    const errorData = await response.json();
+                    showAlert("warning", errorData.message || "Failed to fetch attendance records.");
+                    attendanceRecordsDiv.innerHTML = `<div class="alert alert-warning text-center">${errorData.message || "An error occurred."}</div>`;
+                }
+            } catch (error) {
+                console.error("Error fetching attendance:", error);
+                showAlert("danger", "Network error or server unreachable.");
+                attendanceRecordsDiv.innerHTML = `<div class="alert alert-danger text-center">Could not fetch records due to a network error.</div>`;
+            }
+        });
+
+        filterButton.addEventListener('click', () => {
+            const startDate = startDateInput.value;
+            const endDate = endDateInput.value;
+
+            if (!startDate || !endDate) {
+                showAlert('warning', 'Please select both a start and end date.');
+                return;
+            }
+
+            const filteredRecords = allRecords.filter(record => {
+                const recordDate = record.date;
+                return recordDate >= startDate && recordDate <= endDate;
+            });
+
+            displayData(filteredRecords);
+        });
+
+        resetButton.addEventListener('click', () => {
+            startDateInput.value = '';
+            endDateInput.value = '';
+            displayData(allRecords);
+        });
+
+        function displayData(records) {
+            let presentCount = 0;
+            let absentCount = 0;
+
+            records.forEach(record => {
+                if (record.status === 'PRESENT') presentCount++;
+                if (record.status === 'ABSENT') absentCount++;
+            });
+
+            const totalCount = records.length;
+            totalCountEl.textContent = totalCount;
+            presentCountEl.textContent = presentCount;
+            absentCountEl.textContent = absentCount;
+
+            if (totalCount > 0) {
+                const percentage = (presentCount / totalCount) * 100;
+                percentageEl.textContent = percentage.toFixed(2) + '%';
+            } else {
+                percentageEl.textContent = '0%';
+            }
+
+            attendanceTableBody.innerHTML = "";
+
+            if (records.length === 0) {
+                attendanceTableBody.innerHTML =
+                    `<tr><td colspan="2" class="text-center">No attendance records found for the selected criteria.</td></tr>`;
+                return;
+            }
+
+            records.forEach(record => {
+                const row = attendanceTableBody.insertRow();
+                row.insertCell().textContent = record.date;
+                const statusCell = row.insertCell();
+                statusCell.textContent = record.status;
+                statusCell.classList.add(`status-${record.status}`);
+            });
+        }
+
+        function showAlert(type, message, dismissible = true) {
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    ${dismissible ? '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>' : ''}
+                </div>`;
+        }
+    </script>
+
+</body>
+</html>
